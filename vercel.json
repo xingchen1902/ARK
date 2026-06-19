@@ -1,0 +1,11 @@
+{
+  "buildCommand": null,
+  "outputDirectory": ".",
+  "devCommand": null,
+  "framework": null,
+  "functions": {
+    "api/proxy.py": {
+      "maxDuration": 30
+    }
+  }
+}
