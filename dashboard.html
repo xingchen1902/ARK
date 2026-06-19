@@ -70,8 +70,9 @@ let chartData = null;
 
 async function loadData() {
   // 优先从 Vercel API 获取
-  const apiUrl = window.location.hostname.includes('vercel') || window.location.hostname !== 'localhost' && window.location.hostname !== '' ?
-    '/api/proxy' : 'data.json?_=' + Date.now();
+  // file协议读本地data.json，http(s)协议走API代理
+  const isFileProtocol = window.location.protocol === 'file:';
+  const apiUrl = isFileProtocol ? 'data.json?_=' + Date.now() : '/api/proxy';
 
   try {
     const resp = await fetch(apiUrl);
