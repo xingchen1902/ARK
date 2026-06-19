@@ -1,8 +1,6 @@
 {
-  "functions": {
-    "api/proxy.py": {
-      "maxDuration": 30,
-      "runtime": "python3.12"
-    }
-  }
+  "buildCommand": null,
+  "outputDirectory": null,
+  "devCommand": null,
+  "framework": null
 }
