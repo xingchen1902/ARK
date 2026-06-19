@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARK 链上数据看板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #333; }
+.header { text-align: center; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: #fff; padding: 24px 32px; }
+.header h1 { font-size: 24px; margin-bottom: 4px; }
+.header p { font-size: 14px; opacity: 0.8; }
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+/* Summary Cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.card .label { font-size: 13px; color: #888; margin-bottom: 6px; }
+.card .value { font-size: 22px; font-weight: 700; }
+.card .value.positive { color: #22c55e; }
+.card .value.negative { color: #ef4444; }
+.card .sub { font-size: 12px; color: #999; margin-top: 4px; }
+
+.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+.chart-box { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.chart-box h3 { font-size: 15px; margin-bottom: 16px; color: #555; }
+
+.table-wrap { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow-x: auto; }
+.table-wrap h3 { font-size: 15px; margin-bottom: 16px; color: #555; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { background: #f8f9fa; padding: 10px 12px; text-align: right; font-weight: 600; color: #555; border-bottom: 2px solid #e9ecef; }
+th:first-child { text-align: left; }
+td { padding: 10px 12px; text-align: right; border-bottom: 1px solid #f0f0f0; }
+td:first-child { text-align: left; font-weight: 600; }
+tr:hover td { background: #f8f9ff; }
+
+@media (max-width: 900px) {
+  .charts { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 ARK 链上数据看板</h1>
+  <p id="updateTime">BSC 链 · 数据来源于飞书多维表格</p>
+</div>
+
+<div class="container">
+  <div class="cards" id="summaryCards"></div>
+
+  <div class="charts">
+    <div class="chart-box"><h3>📈 奖金池 · 涡轮 · 质押趋势</h3><canvas id="mainChart"></canvas></div>
+    <div class="chart-box"><h3>🥧 净质押 & gARK销毁</h3><canvas id="netChart"></canvas></div>
+  </div>
+
+  <div class="table-wrap">
+    <h3>📋 每日明细</h3>
+    <table id="dataTable"><thead><tr>
+      <th>日期</th><th>奖金池余额</th><th>奖金池提取</th><th>动静态涡轮</th><th>静态涡轮</th>
+      <th>动态涡轮</th><th>质押池余额</th><th>新增质押</th><th>赎回</th><th>净质押量</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+</div>
+
+<script>
+// ========== 数据（从飞书多维表格获取） ==========
+let chartData = [];
+let mainChart = null, netChart = null;
+
+// 后端代理 URL（可选，如果部署了后端）
+const API_PROXY = '';  // 留空则用内嵌数据
+
+async function loadData() {
+  // 直接请求飞书 API（需要后端代理，否则会跨域）
+  if (API_PROXY) {
+    try {
+      const r = await fetch(API_PROXY);
+      chartData = await r.json();
+    } catch(e) {
+      console.warn('代理获取失败，使用内嵌数据', e);
+      chartData = getEmbeddedData();
+    }
+  } else {
+    chartData = getEmbeddedData();
+  }
+  render();
+}
+
+function getEmbeddedData() {
+  return [{"date": "2026-06-12", "bonus_balance": 8983347.17, "bonus_withdraw": 162498.03, "dynamic": 190537.31, "static": 114163.61, "dynamic_turbo": 76373.7, "stake_balance": 24334080.6, "stake_in": 128240.01, "stake_out": 70148.95, "net_stake": 58091.06}, {"date": "2026-06-13", "bonus_balance": 8820849.14, "bonus_withdraw": 199718.26, "dynamic": 249413.4, "static": 125006.99, "dynamic_turbo": 124406.41, "stake_balance": 24392171.66, "stake_in": 138066.99, "stake_out": 55740.78, "net_stake": 82326.21}, {"date": "2026-06-14", "bonus_balance": 8621130.88, "bonus_withdraw": 212095.38, "dynamic": 307274.99, "static": 200159.2, "dynamic_turbo": 107115.79, "stake_balance": 24474497.87, "stake_in": 178024.07, "stake_out": 61803.22, "net_stake": 116220.85}, {"date": "2026-06-15", "bonus_balance": 8409035.5, "bonus_withdraw": 278527.54, "dynamic": 258786.36, "static": 155104.36, "dynamic_turbo": 103682.0, "stake_balance": 24590718.72, "stake_in": 269499.69, "stake_out": 59495.47, "net_stake": 210004.22}, {"date": "2026-06-16", "bonus_balance": 8130507.96, "bonus_withdraw": 203174.47, "dynamic": 201623.87, "static": 111473.25, "dynamic_turbo": 90150.62, "stake_balance": 24800722.94, "stake_in": 120111.17, "stake_out": 39460.74, "net_stake": 80650.43}, {"date": "2026-06-17", "bonus_balance": 7927333.49, "bonus_withdraw": 170247.19, "dynamic": 198855.91, "static": 104411.18, "dynamic_turbo": 94444.73, "stake_balance": 24881373.37, "stake_in": 122071.61, "stake_out": 48520.73, "net_stake": 73550.88}, {"date": "2026-06-18", "bonus_balance": 7757086.3, "bonus_withdraw": 207327.02, "dynamic": 253214.88, "static": 143578.57, "dynamic_turbo": 109636.31, "stake_balance": 24954924.25, "stake_in": 145524.85, "stake_out": 73887.9, "net_stake": 71636.95}, {"date": "2026-06-19", "bonus_balance": 7549759.28, "bonus_withdraw": 210320.42, "dynamic": 195421.34, "static": 99397.44, "dynamic_turbo": 96023.9, "stake_balance": 25026561.2, "stake_in": 111871.0, "stake_out": 54180.14, "net_stake": 57690.86}];
+}
+
+function render() {
+  const data = chartData;
+  if (!data || data.length === 0) return;
+
+  const latest = data[data.length - 1];
+  const prev = data.length > 1 ? data[data.length - 2] : null;
+
+  // Summary Cards
+  const cards = [
+    { label: '💰 奖金池余额', value: latest.bonus_balance, fmt: v => v.toLocaleString(), sub: '当前' },
+    { label: '🏛️ 质押池余额', value: latest.stake_balance, fmt: v => v.toLocaleString(), sub: '当前' },
+    { label: '📤 奖金池提取', value: latest.bonus_withdraw, fmt: v => v.toLocaleString(), sub: '今日' },
+    { label: '⚡ 动静态涡轮', value: latest.dynamic, fmt: v => v.toLocaleString(), sub: '今日' },
+    { label: '🔥 静态涡轮(gARK)', value: latest.static, fmt: v => v.toLocaleString(), sub: '今日' },
+    { label: '📥 新增质押', value: latest.stake_in, fmt: v => v.toLocaleString(), sub: '今日' },
+    { label: '📤 赎回', value: latest.stake_out, fmt: v => v.toLocaleString(), sub: '今日' },
+    { label: '⚖️ 净质押', value: latest.net_stake, cls: latest.net_stake >= 0 ? 'positive' : 'negative', fmt: v => (v >= 0 ? '+' : '') + v.toLocaleString(), sub: '今日' },
+  ];
+
+  document.getElementById('summaryCards').innerHTML = cards.map(c =>
+    `<div class="card"><div class="label">${c.label}</div><div class="value ${c.cls || ''}">${c.fmt(c.value)}</div><div class="sub">${c.sub}</div></div>`
+  ).join('');
+
+  // Table
+  const dates = data.map(d => d.date);
+  const tbody = data.slice().reverse().map(d => `
+    <tr>
+      <td>${d.date}</td>
+      <td>${d.bonus_balance.toLocaleString()}</td>
+      <td>${d.bonus_withdraw.toFixed(2)}</td>
+      <td>${d.dynamic.toFixed(2)}</td>
+      <td>${d.static.toFixed(2)}</td>
+      <td>${d.dynamic_turbo.toFixed(2)}</td>
+      <td>${d.stake_balance.toLocaleString()}</td>
+      <td>${d.stake_in.toFixed(2)}</td>
+      <td>${d.stake_out.toFixed(2)}</td>
+      <td style="color:${d.net_stake >= 0 ? '#22c55e' : '#ef4444'}">${d.net_stake.toFixed(2)}</td>
+    </tr>
+  `).join('');
+  document.querySelector('#dataTable tbody').innerHTML = tbody;
+
+  // Charts
+  const ctx1 = document.getElementById('mainChart').getContext('2d');
+  const ctx2 = document.getElementById('netChart').getContext('2d');
+
+  if (mainChart) mainChart.destroy();
+  if (netChart) netChart.destroy();
+
+  mainChart = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: dates,
+      datasets: [
+        { label: '奖金池提取', data: data.map(d => d.bonus_withdraw), backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 4 },
+        { label: '动静态涡轮', data: data.map(d => d.dynamic), backgroundColor: 'rgba(139,92,246,0.7)', borderRadius: 4 },
+        { label: '新增质押', data: data.map(d => d.stake_in), backgroundColor: 'rgba(34,197,94,0.7)', borderRadius: 4 },
+        { label: '赎回', data: data.map(d => d.stake_out), backgroundColor: 'rgba(239,68,68,0.6)', borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom' } },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() } } }
+    }
+  });
+
+  netChart = new Chart(ctx2, {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: [
+        { label: '净质押', data: data.map(d => d.net_stake), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.3, pointRadius: 5, pointBackgroundColor: '#f59e0b' },
+        { label: '静态涡轮(gARK)', data: data.map(d => d.static), borderColor: '#ef4444', borderDash: [5,5], tension: 0.3, pointRadius: 4, pointBackgroundColor: '#ef4444' },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom' } },
+      scales: { y: { ticks: { callback: v => v.toLocaleString() } } }
+    }
+  });
+
+  document.getElementById('updateTime').textContent =
+    `BSC 链 · 数据更新至 ${data[data.length-1].date} `;
+}
+
+loadData();
+</script>
+</body>
+</html>
