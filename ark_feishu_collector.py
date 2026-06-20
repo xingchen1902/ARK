@@ -311,6 +311,42 @@ if __name__ == "__main__":
         write_to_feishu(summary)
         print(f"{'='*50}")
 
+        # 写入 SQLite 数据库
+        try:
+            import sqlite3
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ark_data.db")
+            conn = sqlite3.connect(db_path)
+            conn.execute("""CREATE TABLE IF NOT EXISTS ark_daily (
+                date TEXT PRIMARY KEY,
+                bonus_balance REAL,
+                bonus_withdraw REAL,
+                static_withdraw REAL,
+                dynamic_withdraw REAL,
+                stake_balance REAL,
+                stake_in REAL,
+                stake_out REAL,
+                net_stake REAL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""")
+            conn.execute("""INSERT OR REPLACE INTO ark_daily
+                (date, bonus_balance, bonus_withdraw, static_withdraw, dynamic_withdraw,
+                 stake_balance, stake_in, stake_out, net_stake)
+                VALUES (?,?,?,?,?,?,?,?,?)""",
+                (summary["date"],
+                 summary["bonus_balance"],
+                 summary["bonus_withdraw"],
+                 summary["static_withdraw"],
+                 summary["dynamic_withdraw"],
+                 summary["stake_balance"],
+                 summary["stake_in"],
+                 summary["stake_out"],
+                 summary["net_stake"]))
+            conn.commit()
+            conn.close()
+            print(f"  [SQLite] 已写入 ark_data.db")
+        except Exception as e:
+            print(f"  [SQLite] 写入失败: {e}")
+
         # 更新本地 data.json
         try:
             data_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
