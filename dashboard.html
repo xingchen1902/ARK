@@ -98,14 +98,15 @@ function render() {
 
   // Summary Cards
   const cards = [
-    { label: '💰 奖金池余额', value: latest.bonus_balance, sub: '当前' },
-    { label: '🏛️ 质押池余额', value: latest.stake_balance, sub: '当前' },
-    { label: '📤 奖金池提取', value: latest.bonus_withdraw, sub: '今日' },
-    { label: '⚡ 动静态涡轮', value: latest.dynamic, sub: '今日' },
-    { label: '🔥 静态涡轮(gARK)', value: latest.static, sub: '今日' },
-    { label: '📥 新增质押', value: latest.stake_in, sub: '今日' },
-    { label: '📤 赎回', value: latest.stake_out, sub: '今日' },
-    { label: '⚖️ 净质押', value: latest.net_stake, cls: latest.net_stake >= 0 ? 'positive' : 'negative', fmt: v => (v >= 0 ? '+' : '') + v.toLocaleString(), sub: '今日' },
+    { label: '💰 奖金池余额', value: latest.bonus_balance, sub: latest.date },
+    { label: '🏛️ 质押池余额', value: latest.stake_balance, sub: latest.date },
+    { label: '📤 奖金池提取', value: latest.bonus_withdraw, sub: latest.date },
+    { label: '⚡ 动静态涡轮', value: latest.dynamic, sub: latest.date },
+    { label: '🔥 静态涡轮(gARK)', value: latest.static, sub: latest.date },
+    { label: '🌀 动态涡轮', value: latest.dynamic_turbo, sub: latest.date },
+    { label: '📥 新增质押', value: latest.stake_in, sub: latest.date },
+    { label: '📤 赎回', value: latest.stake_out, sub: latest.date },
+    { label: '⚖️ 净质押', value: latest.net_stake, cls: latest.net_stake >= 0 ? 'positive' : 'negative', fmt: v => (v >= 0 ? '+' : '') + v.toLocaleString(), sub: latest.date },
   ];
   document.getElementById('summaryCards').innerHTML = cards.map(c =>
     '<div class="card"><div class="label">' + c.label + '</div><div class="value ' + (c.cls || '') + '">' + (c.fmt ? c.fmt(c.value) : (+c.value).toLocaleString()) + '</div><div class="sub">' + c.sub + '</div></div>'
