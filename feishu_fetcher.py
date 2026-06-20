@@ -13,8 +13,8 @@ load_dotenv()
 
 BJT = timezone(timedelta(hours=8))
 
-FEISHU_APP_ID = os.environ.get("FEISHU_APP_ID", "cli_a949f1b80863dbda")
-FEISHU_APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "J4nvL0twSrqUCN6k1RzMudC7beg2qDhH")
+FEISHU_APP_ID = os.environ.get("FEISHU_APP_ID", "")
+FEISHU_APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
 FEISHU_APP_TOKEN = "B5lBbWgjXamRS6s1CcEcTvgtnQc"
 FEISHU_TABLE_ID = "tblVmNxjg8WjyXdw"
 
