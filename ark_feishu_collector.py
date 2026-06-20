@@ -310,5 +310,54 @@ if __name__ == "__main__":
         print(f"[写入] 飞书多维表格")
         write_to_feishu(summary)
         print(f"{'='*50}")
+
+        # 更新本地 data.json
+        try:
+            data_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json")
+            feishu_data = []
+            if os.path.exists(data_file):
+                with open(data_file) as f:
+                    cached = json.load(f)
+                    feishu_data = cached.get("data", [])
+            # 去重：删除同日期旧记录
+            feishu_data = [x for x in feishu_data if x.get("date") != summary["date"]]
+            feishu_data.append({
+                "date": summary["date"],
+                "bonus_balance": summary["bonus_balance"],
+                "bonus_withdraw": summary["bonus_withdraw"],
+                "dynamic": summary["dynamic_withdraw"],
+                "static": summary["static_withdraw"],
+                "dynamic_turbo": summary["dynamic_withdraw"] - summary["static_withdraw"],
+                "stake_balance": summary["stake_balance"],
+                "stake_in": summary["stake_in"],
+                "stake_out": summary["stake_out"],
+                "net_stake": summary["net_stake"],
+            })
+            feishu_data.sort(key=lambda x: x["date"])
+            with open(data_file, "w") as f:
+                json.dump({"data": feishu_data, "last_update": datetime.now(BJT).strftime("%Y-%m-%d %H:%M:%S")}, f, ensure_ascii=False)
+            print(f"  [data.json] 已更新，共 {len(feishu_data)} 条记录")
+        except Exception as e:
+            print(f"  [data.json] 更新失败: {e}")
+
+        # 推送 Telegram
+        try:
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from telegram_bot import push_data
+            push_data({
+                "date": summary["date"],
+                "bonus_balance": summary["bonus_balance"],
+                "bonus_withdraw": summary["bonus_withdraw"],
+                "stake_balance": summary["stake_balance"],
+                "stake_in": summary["stake_in"],
+                "stake_out": summary["stake_out"],
+                "net_stake": summary["net_stake"],
+                "static": summary["static_withdraw"],
+                "dynamic_turbo": summary["dynamic_withdraw"] - summary["static_withdraw"],
+                "dynamic": summary["dynamic_withdraw"],
+            })
+            print(f"[Telegram] 推送完成")
+        except Exception as e:
+            print(f"[Telegram] 推送失败: {e}")
     else:
         sys.exit(1)
