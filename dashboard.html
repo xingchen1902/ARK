@@ -74,9 +74,10 @@ function fmtNum(n) {
 
 async function loadData() {
   // 优先从 Vercel API 获取
-  // file协议读本地data.json，http(s)协议走API代理
+  // 优先从 VPS SQLite API 读取，Vercel API 作为备选
   const isFileProtocol = window.location.protocol === 'file:';
-  const apiUrl = isFileProtocol ? 'data.json?_=' + Date.now() : '/api/proxy';
+  const vpsApi = 'http://35.212.161.87:8080/api/data';
+  const apiUrl = isFileProtocol ? vpsApi : '/api/proxy';
 
   try {
     const resp = await fetch(apiUrl);
