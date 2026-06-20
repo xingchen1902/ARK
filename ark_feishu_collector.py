@@ -273,7 +273,7 @@ def collect_daily(target_date_bjt):
     dynamic_withdraw = dynamic_total / 10**DECIMALS
     print(f"  动静态涡轮: {dynamic_withdraw:.2f}")
 
-    net_stake = stake_in - stake_out - bonus_out
+    net_stake = stake_in - stake_out
 
     print(f"\n  [结果]")
     print(f"    奖金池提取: {bonus_out:.2f}")
