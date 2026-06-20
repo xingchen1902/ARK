@@ -68,6 +68,10 @@ tr:hover td { background: #f8f9ff; }
 // 如果 data.json 不存在或加载失败，使用内嵌的静态数据
 let chartData = null;
 
+function fmtNum(n) {
+  return Math.round(n).toLocaleString();
+}
+
 async function loadData() {
   // 优先从 Vercel API 获取
   // file协议读本地data.json，http(s)协议走API代理
@@ -78,7 +82,10 @@ async function loadData() {
     const resp = await fetch(apiUrl);
     const json = await resp.json();
     if (json && json.data && json.data.length > 0) {
-      chartData = json.data;
+      // 按日期去重，每个日期只保留最新一条
+      const seen = {};
+      json.data.forEach(item => { seen[item.date] = item; });
+      chartData = Object.values(seen).sort((a, b) => a.date.localeCompare(b.date));
       document.getElementById('updateTime').textContent = 'BSC 链 · 飞书数据实时同步 · 更新于 ' + (json.last_update || '');
       render();
       return;
@@ -109,12 +116,12 @@ function render() {
     { label: '⚖️ 净质押', value: latest.net_stake, cls: latest.net_stake >= 0 ? 'positive' : 'negative', fmt: v => (v >= 0 ? '+' : '') + v.toLocaleString(), sub: latest.date },
   ];
   document.getElementById('summaryCards').innerHTML = cards.map(c =>
-    '<div class="card"><div class="label">' + c.label + '</div><div class="value ' + (c.cls || '') + '">' + (c.fmt ? c.fmt(c.value) : (+c.value).toLocaleString()) + '</div><div class="sub">' + c.sub + '</div></div>'
+    '<div class="card"><div class="label">' + c.label + '</div><div class="value ' + (c.cls || '') + '">' + (c.fmt ? c.fmt(c.value) : fmtNum(c.value)) + '</div><div class="sub">' + c.sub + '</div></div>'
   ).join('');
 
   const dates = data.map(d => d.date);
   const tableRows = data.slice().reverse().map(d =>
-    '<tr><td>' + d.date + '</td><td>' + d.bonus_balance.toLocaleString() + '</td><td>' + d.bonus_withdraw.toFixed(2) + '</td><td>' + d.dynamic.toFixed(2) + '</td><td>' + d.static.toFixed(2) + '</td><td>' + d.dynamic_turbo.toFixed(2) + '</td><td>' + d.stake_balance.toLocaleString() + '</td><td>' + d.stake_in.toFixed(2) + '</td><td>' + d.stake_out.toFixed(2) + '</td><td style="color:' + (d.net_stake >= 0 ? '#22c55e' : '#ef4444') + '">' + d.net_stake.toFixed(2) + '</td></tr>'
+    '<tr><td>' + d.date + '</td><td>' + d.bonus_balance.toLocaleString() + '</td><td>' + d.bonus_withdraw + '</td><td>' + d.dynamic + '</td><td>' + d.static + '</td><td>' + d.dynamic_turbo + '</td><td>' + d.stake_balance.toLocaleString() + '</td><td>' + d.stake_in + '</td><td>' + d.stake_out + '</td><td style="color:' + (d.net_stake >= 0 ? '#22c55e' : '#ef4444') + '">' + d.net_stake + '</td></tr>'
   ).join('');
   document.querySelector('#dataTable tbody').innerHTML = tableRows;
 

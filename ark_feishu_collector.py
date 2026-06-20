@@ -105,8 +105,17 @@ def write_to_feishu(data):
         date_ms = int(datetime.strptime(data["date"], "%Y-%m-%d").replace(tzinfo=BJT).timestamp() * 1000)
         for item in existing.get("data", {}).get("items", []):
             if item.get("fields", {}).get(FIELD_DATE) == date_ms:
-                print(f"  [跳过] {data['date']} 已有记录")
-                return True, item["record_id"]
+                rid = item["record_id"]
+                rd = requests.delete(
+                    f"https://open.feishu.cn/open-apis/bitable/v1/apps/{FEISHU_APP_TOKEN}/tables/{FEISHU_TABLE_ID}/records/{rid}",
+                    headers=headers, timeout=15
+                )
+                dr = rd.json()
+                if dr.get("code") == 0:
+                    print(f"  [删除旧记录] {data['date']} (record_id={rid})")
+                    time.sleep(0.3)  # 等飞书处理完成
+                else:
+                    print(f"  [删除失败] {data['date']}: {dr.get('msg')}")
 
     ts = int(datetime.strptime(data["date"], "%Y-%m-%d").replace(tzinfo=BJT).timestamp() * 1000)
     record = {"fields": {
@@ -155,14 +164,26 @@ def collect_daily(target_date_bjt):
 
     # 小范围二分精确定位 (±1000块，10次迭代)
     def find_block(target_ts, estimate):
+        if estimate < 0:
+            estimate = 0
         lo, hi = estimate - 1000, estimate + 1000
+        if hi > current_block:
+            hi = current_block
+        if lo < 0:
+            lo = 0
         for _ in range(12):
-            if hi - lo <= 1: return hi
+            if hi - lo <= 1:
+                return hi
             mid = (lo + hi) // 2
             b = rpc_call(rpc_url, "eth_getBlockByNumber", [hex(mid), False])
+            if b is None:
+                hi = mid
+                continue
             bt = int(b["timestamp"], 16)
-            if bt < target_ts: lo = mid
-            else: hi = mid
+            if bt < target_ts:
+                lo = mid
+            else:
+                hi = mid
             time.sleep(0.05)
         return hi
 
