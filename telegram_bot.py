@@ -86,55 +86,6 @@ def load_data():
 
 
 # ==================== 格式化消息 ====================
-
-def build_daily_msg(record):
-    """构建单日报送消息"""
-    date = record.get("date", "?")
-    msg = f"""<b>📊 ARK 链上数据采集完成 · {date}</b>
-
-━━━━━━━━━━━━━━━━━━
-
-<b>💰 奖金池</b>
-余额：{fmt_num(record.get('bonus_balance',0))} ARK
-当日提取：<code>{fmt_num(record.get('bonus_withdraw',0))}</code> ARK
-
-<b>🔒 质押池</b>
-余额：{fmt_num(record.get('stake_balance',0))} ARK
-新增：<code>{fmt_num(record.get('stake_in',0))}</code> ARK
-赎回：<code>{fmt_num(record.get('stake_out',0))}</code> ARK
-净质押：<b>{fmt_num(record.get('net_stake',0))}</b> ARK
-
-<b>⚡ 涡轮</b>
-静态：{fmt_num(record.get('static',0))} ARK
-动态：{fmt_num(record.get('dynamic_turbo',0))} ARK
-动静态：{fmt_num(record.get('dynamic',0))} ARK
-
-━━━━━━━━━━━━━━━━━━
-<i>数据来源：BSC 链上 · 飞书多维表格</i>"""
-    return msg
-
-
-def build_7days_msg(records):
-    """构建近7天概览消息"""
-    recent = records[-7:] if len(records) > 7 else records
-    lines = ["<b>📈 ARK 近7天数据</b>\n"]
-    lines.append("<pre>")
-    lines.append(f"{'日期':<12} {'净质押':>10} {'新增':>10} {'赎回':>10} {'提取':>10}")
-    lines.append("─" * 54)
-    for r in recent:
-        lines.append(
-            f"{r['date']:<12} "
-            f"{r['net_stake']:>10,.0f} "
-            f"{r['stake_in']:>10,.0f} "
-            f"{r['stake_out']:>10,.0f} "
-            f"{r['bonus_withdraw']:>10,.0f}"
-        )
-    lines.append("</pre>")
-    return "\n".join(lines)
-
-
-# ==================== 推送功能（给采集脚本调用） ====================
-
 def push_data(record):
     """推送一条采集记录到群组（被采集脚本调用）"""
     msg = build_daily_msg(record)
@@ -142,39 +93,6 @@ def push_data(record):
     if ok:
         log(f"已推送 {record.get('date','?')} 数据到群组")
     return ok
-
-
-def push_today():
-    """从 data.json 推送最新一条数据"""
-    data, _ = load_data()
-    if not data:
-        send_telegram("⚠️ 暂无数据")
-        return False
-    record = data[-1]
-    return push_data(record)
-
-
-def push_7days(chat_id=None):
-    """推送近7天概览"""
-    data, _ = load_data()
-    if not data:
-        msg = "⚠️ 暂无数据"
-        if chat_id:
-            send_to_chat(chat_id, msg)
-        else:
-            send_telegram(msg)
-        return False
-
-    msg = build_7days_msg(data)
-    if chat_id:
-        send_to_chat(chat_id, msg)
-    else:
-        send_telegram(msg)
-    return True
-
-
-# ==================== 命令轮询 ====================
-
 def poll_commands():
     """轮询 getUpdates 响应群内命令"""
     global LAST_UPDATE_ID
@@ -206,27 +124,10 @@ def poll_commands():
                 if chat_id != CHAT_ID:
                     continue
 
-                if text == "/7days":
-                    log("收到 /7days")
-                    push_7days(chat_id=chat_id)
-
-                elif text == "/today":
-                    log("收到 /today")
-                    data, _ = load_data()
-                    if data:
-                        send_to_chat(chat_id, build_daily_msg(data[-1]))
-                    else:
-                        send_to_chat(chat_id, "⚠️ 暂无数据")
-
-                elif text in ("/help", "/start"):
+                if text in ("/help", "/start"):
                     help_text = """<b>🤖 ARK 数据机器人</b>
 
 采集完成后自动推送数据到群组
-
-📋 可用命令：
-/today - 查看最新数据
-/7days - 查看近7天数据
-/help  - 显示帮助
 
 数据来源：BSC 链上 · 飞书多维表格"""
                     send_to_chat(chat_id, help_text)
